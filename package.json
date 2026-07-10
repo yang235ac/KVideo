@@ -9,7 +9,6 @@
     "lint": "eslint",
     "test": "tsx --test tests/**/*.test.ts",
     "pages:build": "next-on-pages && node scripts/transpile-client-assets.mjs .vercel/output/static/_next/static && cp public/version.json .vercel/output/static/version.json"
-
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
