@@ -86,7 +86,9 @@ const DANMAKU_API_URL = process.env.DANMAKU_API_URL || process.env.NEXT_PUBLIC_D
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 const MANAGED_AUTH_FORCED = process.env.MANAGED_AUTH_ENABLED === 'true';
 
-const effectiveAdminPassword = ADMIN_PASSWORD || ACCESS_PASSWORD;
+function getEffectiveAdminPassword(): string {
+  return process.env.ADMIN_PASSWORD || process.env.ACCESS_PASSWORD || ADMIN_PASSWORD || ACCESS_PASSWORD;
+}
 
 let cachedRedis: Redis | null | undefined;
 
@@ -119,7 +121,7 @@ function isManagedAuthEnabled(): boolean {
 }
 
 function isLegacyAuthConfigured(): boolean {
-  return !!(effectiveAdminPassword || ACCOUNTS);
+  return !!(getEffectiveAdminPassword() || ACCOUNTS);
 }
 
 function isStoredAccountRecord(value: unknown): value is StoredAccountRecord {
@@ -174,6 +176,7 @@ async function saveManagedAccounts(accounts: StoredAccountRecord[]): Promise<voi
 function getBootstrapSeeds(): SeedAccountInput[] {
   const seeds: SeedAccountInput[] = [];
   const usernames = new Set<string>();
+  const effectiveAdminPassword = getEffectiveAdminPassword();
 
   if (effectiveAdminPassword) {
     usernames.add('admin');
@@ -274,7 +277,7 @@ function resolveSessionSecret(loginMode: LoginMode): string | null {
   }
 
   if (loginMode === 'legacy_password' && isLegacyAuthConfigured()) {
-    return `legacy:${effectiveAdminPassword}:${ACCOUNTS}:${PREMIUM_PASSWORD}`;
+    return `legacy:${getEffectiveAdminPassword()}:${ACCOUNTS}:${PREMIUM_PASSWORD}`;
   }
 
   return null;
@@ -355,7 +358,7 @@ async function authenticateManagedLogin(username: string, password: string): Pro
   const usesBootstrapAdminCredential = isBootstrapAdminCredential(
     normalizedUsername,
     password,
-    effectiveAdminPassword
+    getEffectiveAdminPassword()
   );
 
   if (!account) {
@@ -401,6 +404,7 @@ async function authenticateManagedLogin(username: string, password: string): Pro
 
 async function authenticateLegacyLogin(password: string): Promise<ServerAuthSession | null> {
   if (!password) return null;
+  const effectiveAdminPassword = getEffectiveAdminPassword();
 
   if (effectiveAdminPassword && password === effectiveAdminPassword) {
     return {
@@ -553,7 +557,7 @@ export async function listAccountInfo(): Promise<AccountInfo[]> {
   const legacyAccounts: AccountInfo[] = [];
   let index = 0;
 
-  if (effectiveAdminPassword) {
+  if (getEffectiveAdminPassword()) {
     legacyAccounts.push({
       id: 'legacy-admin',
       username: 'admin',
